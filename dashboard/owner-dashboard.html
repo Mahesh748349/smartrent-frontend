@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Owner Dashboard - SmartRent</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/dashboard.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="nav-container">
+        <div class="logo">
+          <i class="fas fa-home"></i>
+          <span>SmartRent - Owner</span>
+        </div>
+        <div class="nav-links">
+          <a href="#" onclick="loadDashboardView('overview')">Overview</a>
+          <a href="#" onclick="loadDashboardView('properties')">Properties</a>
+          <a href="#" onclick="loadDashboardView('tenants')">Tenants</a>
+          <a href="#" onclick="loadDashboardView('payments')">Payments</a>
+          <a href="#" onclick="loadDashboardView('maintenance')">Maintenance</a>
+        </div>
+        <div class="auth-buttons">
+          <span id="userWelcome"></span>
+          <button class="btn btn-outline" onclick="logout()">Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard">
+      <div class="dashboard-header">
+        <div class="container">
+          <h1>Owner Dashboard</h1>
+          <p>Manage your properties and tenants efficiently</p>
+        </div>
+      </div>
+
+      <div class="container">
+        <!-- Statistics Cards -->
+        <div id="dashboardStats" class="dashboard-stats">
+          <!-- Stats will be loaded here -->
+        </div>
+
+        <!-- Dynamic Content Sections -->
+        <div id="dashboardContent">
+          <!-- Content will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <script src="../js/app.js"></script>
+    <script src="../js/dashboard.js"></script>
+    <script src="../js/properties.js"></script>
+    <script src="../js/tenants.js"></script>
+    <script src="../js/payments.js"></script>
+  </body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartRent - Property Management</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="nav-container">
+        <div class="logo">
+          <i class="fas fa-home"></i>
+          <span>SmartRent</span>
+        </div>
+        <div class="nav-links">
+          <a href="#home" class="nav-link">Home</a>
+          <a href="#properties" class="nav-link">Properties</a>
+          <a href="#about" class="nav-link">About</a>
+          <a href="#contact" class="nav-link">Contact</a>
+        </div>
+        <div class="auth-buttons">
+          <button class="btn btn-outline" id="loginBtn">Login</button>
+          <button class="btn btn-primary" id="registerBtn">Register</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Home Section -->
+    <section id="home" class="hero">
+      <div class="container">
+        <h1>Smart Property Management</h1>
+        <p>
+          Streamline your rental business with our comprehensive management
+          solution
+        </p>
+        <div class="hero-buttons">
+          <button class="btn btn-primary" id="getStartedBtn">
+            Get Started
+          </button>
+          <button class="btn btn-outline" id="learnMoreBtn">Learn More</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Properties Section -->
+    <section id="properties" class="properties">
+      <div class="container">
+        <h2>Available Properties</h2>
+        <div id="propertiesList" class="properties-grid">
+          <!-- Properties will be loaded here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+      <div class="container">
+        <h2>About SmartRent</h2>
+        <div class="about-content">
+          <div class="about-text">
+            <h3>Complete Property Management Solution</h3>
+            <p>
+              SmartRent helps property owners and managers streamline their
+              rental business with powerful tools for tenant management, rent
+              collection, maintenance tracking, and financial reporting.
+            </p>
+
+            <div class="features">
+              <div class="feature">
+                <h4>Tenant Management</h4>
+                <p>
+                  Manage tenant information, lease agreements, and communication
+                </p>
+              </div>
+              <div class="feature">
+                <h4>Rent Collection</h4>
+                <p>Track payments, send reminders, and generate receipts</p>
+              </div>
+              <div class="feature">
+                <h4>Maintenance Tracking</h4>
+                <p>Handle maintenance requests and track repair status</p>
+              </div>
+              <div class="feature">
+                <h4>Financial Reports</h4>
+                <p>Generate income reports and expense tracking</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+      <div class="container">
+        <h2>Contact Us</h2>
+        <div class="contact-content">
+          <div class="contact-info">
+            <h3>Get In Touch</h3>
+            <div class="contact-item">
+              <i class="fas fa-envelope"></i>
+              <span>support@smartrent.com</span>
+            </div>
+            <div class="contact-item">
+              <i class="fas fa-phone"></i>
+              <span>+1 (555) 123-4567</span>
+            </div>
+            <div class="contact-item">
+              <i class="fas fa-map-marker-alt"></i>
+              <span>123 Business Ave, Suite 100<br />City, State 12345</span>
+            </div>
+          </div>
+          <div class="contact-form">
+            <h3>Send Message</h3>
+            <form id="contactForm">
+              <div class="form-group">
+                <input type="text" placeholder="Your Name" required />
+              </div>
+              <div class="form-group">
+                <input type="email" placeholder="Your Email" required />
+              </div>
+              <div class="form-group">
+                <textarea
+                  placeholder="Your Message"
+                  rows="5"
+                  required
+                ></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Send Message
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h3>SmartRent</h3>
+            <p>Professional property management made simple</p>
+          </div>
+          <div class="footer-section">
+            <h4>Quick Links</h4>
+            <a href="#home">Home</a>
+            <a href="#properties">Properties</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <div class="footer-section">
+            <h4>Connect</h4>
+            <div class="social-links">
+              <a href="#"><i class="fab fa-facebook"></i></a>
+              <a href="#"><i class="fab fa-twitter"></i></a>
+              <a href="#"><i class="fab fa-linkedin"></i></a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2024 SmartRent. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Login to SmartRent</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Login</button>
+        </form>
+        <div class="demo-accounts">
+          <p><strong>Demo Owner:</strong> owner@smartrent.com / password</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Join SmartRent</h2>
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="regName">Full Name</label>
+            <input type="text" id="regName" required />
+          </div>
+          <div class="form-group">
+            <label for="regEmail">Email</label>
+            <input type="email" id="regEmail" required />
+          </div>
+          <div class="form-group">
+            <label for="regPassword">Password</label>
+            <input type="password" id="regPassword" required minlength="6" />
+          </div>
+          <div class="form-group">
+            <label for="regRole">I am a:</label>
+            <select id="regRole" required>
+              <option value="">Select Role</option>
+              <option value="owner">Property Owner</option>
+              <option value="tenant">Tenant</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="regPhone">Phone Number</label>
+            <input type="tel" id="regPhone" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            Create Account
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>
