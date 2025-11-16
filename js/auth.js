@@ -1,3 +1,7 @@
+// Use global API_BASE from app.js
+const API_BASE =
+  window.API_BASE || "https://your-smartrent-backend.onrender.com/api";
+
 // Authentication functionality
 document.addEventListener("DOMContentLoaded", function () {
   console.log("🔐 Auth system initializing...");

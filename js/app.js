@@ -1,5 +1,5 @@
 // API configuration
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://smartrent-backend-d5ec.onrender.com";
 let currentUser = null;
 
 // Initialize application when DOM is loaded
