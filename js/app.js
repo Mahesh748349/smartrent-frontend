@@ -681,3 +681,21 @@ if (window.location.pathname.includes("tenant-dashboard.html")) {
     loadTenantView("overview");
   });
 }
+// Reload CSS to fix styling issues
+function reloadCSS() {
+  const links = document.querySelectorAll('link[rel="stylesheet"]');
+  links.forEach((link) => {
+    const url = new URL(link.href, window.location.origin);
+    url.searchParams.set("v", Date.now());
+    link.href = url.toString();
+  });
+}
+
+// Call this after login/registration
+function fixStyling() {
+  reloadCSS();
+  // Force redraw
+  document.body.style.display = "none";
+  document.body.offsetHeight; // Trigger reflow
+  document.body.style.display = "block";
+}
