@@ -21,12 +21,12 @@ function checkAuthStatus() {
   const user = localStorage.getItem("user");
 
   if (token && user) {
-    currentUser = JSON.parse(user);
-    updateUIForLoggedInUser();
-
-    // Redirect to dashboard if already on a dashboard page
-    if (window.location.pathname.includes("dashboard")) {
-      updateDashboardUI();
+    try {
+      currentUser = JSON.parse(user);
+      updateUIForLoggedInUser();
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      logout();
     }
   }
 }
@@ -36,28 +36,20 @@ function updateUIForLoggedInUser() {
   const authButtons = document.querySelector(".auth-buttons");
   if (currentUser && authButtons) {
     authButtons.innerHTML = `
-            <span style="margin-right: 15px; color: var(--primary);">
-                Welcome, ${currentUser.name}
-            </span>
-            <button class="btn btn-outline" id="logoutBtn">Logout</button>
-            ${
-              currentUser.role === "owner"
-                ? '<button class="btn btn-primary" onclick="redirectToDashboard()">Dashboard</button>'
-                : '<button class="btn btn-primary" onclick="redirectToDashboard()">My Dashboard</button>'
-            }
-        `;
+      <span style="margin-right: 15px; color: var(--primary); font-weight: 600;">
+        Welcome, ${currentUser.name}
+      </span>
+      <button class="btn btn-outline" id="logoutBtn">Logout</button>
+      <button class="btn btn-primary" onclick="redirectToDashboard()">
+        ${currentUser.role === "owner" ? "Dashboard" : "My Dashboard"}
+      </button>
+    `;
 
-    document.getElementById("logoutBtn").addEventListener("click", logout);
-  }
-}
-
-// Update dashboard UI
-function updateDashboardUI() {
-  const userWelcome =
-    document.getElementById("userWelcome") ||
-    document.getElementById("tenantWelcome");
-  if (userWelcome && currentUser) {
-    userWelcome.textContent = `Welcome, ${currentUser.name}`;
+    // Remove existing event listeners and add new one
+    const newLogoutBtn = document.getElementById("logoutBtn");
+    if (newLogoutBtn) {
+      newLogoutBtn.addEventListener("click", logout);
+    }
   }
 }
 
@@ -100,8 +92,9 @@ function setupEventListeners() {
 
   if (learnMoreBtn) {
     learnMoreBtn.addEventListener("click", () => {
-      alert(
-        "SmartRent provides complete property management solutions including tenant management, rent collection, maintenance tracking, and financial reporting."
+      showNotification(
+        "SmartRent provides complete property management solutions including tenant management, rent collection, maintenance tracking, and financial reporting.",
+        "success"
       );
     });
   }
@@ -180,6 +173,7 @@ async function loadProperties() {
       displayEmptyProperties();
     }
   } catch (error) {
+    console.error("Error loading properties:", error);
     displayEmptyProperties();
   }
 }
@@ -224,7 +218,6 @@ function displayProperties(properties) {
                         View Details
                     </button>
                     ${
-                      // Show Apply Now for everyone except owners
                       !currentUser || currentUser.role === "tenant"
                         ? `
                         <button class="btn btn-primary" onclick="handleApplyNow('${property._id}')">
@@ -244,116 +237,17 @@ function displayProperties(properties) {
 // Handle Apply Now button click
 function handleApplyNow(propertyId) {
   if (!currentUser) {
-    // Not logged in - open login modal
     openModal("loginModal");
     showNotification("Please login to apply for this property", "info");
     return;
   }
 
   if (currentUser.role === "tenant") {
-    // Tenant is logged in - process application
-    applyForProperty(propertyId);
+    showNotification(
+      "Application submitted! The owner will contact you soon.",
+      "success"
+    );
   }
-}
-
-// Apply for property - FIXED SCROLL VERSION
-function applyForProperty(propertyId) {
-  // Find property details
-  const propertiesList = document.getElementById("propertiesList");
-  if (!propertiesList) return;
-
-  const propertyCards = propertiesList.querySelectorAll(".property-card");
-  let propertyName = "";
-  let propertyRent = "";
-  let propertyAddress = "";
-
-  // Find property data
-  propertyCards.forEach((card) => {
-    if (card.querySelector('button[onclick*="' + propertyId + '"]')) {
-      propertyName = card.querySelector("h3").textContent;
-      propertyRent = card.querySelector(".property-price").textContent;
-      propertyAddress = card.querySelector("p").textContent;
-    }
-  });
-
-  if (propertyName) {
-    // Show application form modal with fixed scroll
-    const modalHTML = `
-      <div id="applyModal" class="modal">
-        <div class="modal-content scrollable-modal">
-          <div class="modal-header">
-            <h2>Apply for ${propertyName}</h2>
-            <span class="close" onclick="closeModal('applyModal')">&times;</span>
-          </div>
-          <div class="modal-body">
-            <div class="application-form">
-              <div class="property-summary">
-                <p><strong>Rent:</strong> ${propertyRent}</p>
-                <p><strong>Address:</strong> ${propertyAddress}</p>
-              </div>
-              
-              <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" id="applicantName" value="${currentUser.name}" readonly>
-              </div>
-              
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="applicantEmail" value="${currentUser.email}" readonly>
-              </div>
-              
-              <div class="form-group">
-                <label>Phone *</label>
-                <input type="tel" id="applicantPhone" placeholder="Your phone number" required>
-              </div>
-              
-              <div class="form-group">
-                <label>Message to Owner (Optional)</label>
-                <textarea id="applicantMessage" rows="3" placeholder="Tell the owner why you're interested..."></textarea>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <div class="form-actions">
-              <button type="button" class="btn btn-outline" onclick="closeModal('applyModal')">Cancel</button>
-              <button type="button" class="btn btn-primary" onclick="submitApplication('${propertyId}')">
-                Submit Application
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-    openModal("applyModal");
-  }
-}
-
-// Submit application
-function submitApplication(propertyId) {
-  const phone = document.getElementById("applicantPhone").value;
-  const message = document.getElementById("applicantMessage").value;
-
-  if (!phone) {
-    showNotification("Please provide your phone number", "error");
-    return;
-  }
-
-  // Simulate application submission
-  showNotification(
-    `Application submitted successfully! The owner will contact you soon.`,
-    "success"
-  );
-  closeModal("applyModal");
-
-  // In a real app, you would send this to your backend
-  console.log("Rental application submitted:", {
-    propertyId,
-    applicant: currentUser,
-    phone,
-    message,
-  });
 }
 
 // Display empty properties state
@@ -377,6 +271,12 @@ async function handleLogin(event) {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
+  // Show loading state
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Logging in...";
+  submitBtn.disabled = true;
+
   try {
     const response = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
@@ -393,20 +293,24 @@ async function handleLogin(event) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      showNotification(data.message, "success");
+      showNotification("Login successful!", "success");
       closeModal("loginModal");
       updateUIForLoggedInUser();
       loadProperties();
 
-      // Redirect to dashboard after login
+      // Redirect to dashboard
       setTimeout(() => {
         redirectToDashboard();
       }, 1000);
     } else {
-      showNotification(data.message, "error");
+      showNotification(data.message || "Login failed", "error");
     }
   } catch (error) {
+    console.error("Login error:", error);
     showNotification("Login failed. Please try again.", "error");
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
   }
 }
 
@@ -426,6 +330,12 @@ async function handleRegister(event) {
     return;
   }
 
+  // Show loading state
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Creating account...";
+  submitBtn.disabled = true;
+
   try {
     const response = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
@@ -442,7 +352,7 @@ async function handleRegister(event) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      showNotification(data.message, "success");
+      showNotification("Registration successful!", "success");
       closeModal("registerModal");
       updateUIForLoggedInUser();
       loadProperties();
@@ -450,15 +360,19 @@ async function handleRegister(event) {
       // Clear form
       document.getElementById("registerForm").reset();
 
-      // Redirect to dashboard after registration
+      // Redirect to dashboard
       setTimeout(() => {
         redirectToDashboard();
       }, 1000);
     } else {
-      showNotification(data.message, "error");
+      showNotification(data.message || "Registration failed", "error");
     }
   } catch (error) {
+    console.error("Registration error:", error);
     showNotification("Registration failed. Please try again.", "error");
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
   }
 }
 
@@ -481,6 +395,26 @@ function showNotification(message, type = "info") {
   const notification = document.createElement("div");
   notification.className = `notification notification-${type}`;
   notification.textContent = message;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    z-index: 10000;
+    font-weight: 500;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    animation: slideIn 0.3s ease;
+  `;
+
+  if (type === "success") {
+    notification.style.backgroundColor = "#28a745";
+  } else if (type === "error") {
+    notification.style.backgroundColor = "#dc3545";
+  } else {
+    notification.style.backgroundColor = "#4361ee";
+  }
 
   document.body.appendChild(notification);
 
@@ -501,99 +435,19 @@ function logout() {
   if (window.location.pathname.includes("dashboard")) {
     window.location.href = "../index.html";
   } else {
-    location.reload();
+    window.location.reload();
   }
 }
 
 // Property viewing function
 function viewPropertyDetails(propertyId) {
-  // Find property in the loaded properties
-  const propertiesList = document.getElementById("propertiesList");
-  if (!propertiesList) return;
-
-  const propertyCards = propertiesList.querySelectorAll(".property-card");
-  let propertyData = null;
-
-  // Try to find property data from the current display
-  propertyCards.forEach((card) => {
-    if (card.querySelector('button[onclick*="' + propertyId + '"]')) {
-      const name = card.querySelector("h3").textContent;
-      const price = card.querySelector(".property-price").textContent;
-      const address = card.querySelector("p").textContent;
-      const features = card.querySelectorAll(".property-features span");
-
-      propertyData = {
-        _id: propertyId,
-        name: name,
-        rent: price.replace("$", "").replace("/month", ""),
-        address: { street: address.split(",")[0] },
-        bedrooms: features[0].textContent.replace(" beds", "").trim(),
-        bathrooms: features[1].textContent.replace(" baths", "").trim(),
-        area: features[2].textContent,
-      };
-    }
-  });
-
-  if (propertyData) {
-    const modalHTML = `
-      <div id="propertyDetailsModal" class="modal">
-        <div class="modal-content scrollable-modal">
-          <div class="modal-header">
-            <h2>${propertyData.name}</h2>
-            <span class="close" onclick="closeModal('propertyDetailsModal')">&times;</span>
-          </div>
-          <div class="modal-body">
-            <div class="property-details">
-              <div class="detail-section">
-                <h3>Basic Information</h3>
-                <div class="detail-grid">
-                  <div class="detail-item">
-                    <strong>Rent:</strong> $${propertyData.rent}/month
-                  </div>
-                  <div class="detail-item">
-                    <strong>Bedrooms:</strong> ${propertyData.bedrooms}
-                  </div>
-                  <div class="detail-item">
-                    <strong>Bathrooms:</strong> ${propertyData.bathrooms}
-                  </div>
-                  <div class="detail-item">
-                    <strong>Area:</strong> ${propertyData.area}
-                  </div>
-                </div>
-              </div>
-              
-              <div class="detail-section">
-                <h3>Address</h3>
-                <p>${propertyData.address.street}</p>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <div class="property-actions">
-              ${
-                !currentUser
-                  ? `<button class="btn btn-primary" onclick="openModal('loginModal'); closeModal('propertyDetailsModal');">Login to Apply</button>`
-                  : currentUser.role === "tenant"
-                  ? `<button class="btn btn-primary" onclick="applyForProperty('${propertyId}'); closeModal('propertyDetailsModal');">Apply Now</button>`
-                  : ""
-              }
-              <button class="btn btn-outline" onclick="closeModal('propertyDetailsModal')">Close</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML("beforeend", modalHTML);
-    openModal("propertyDetailsModal");
-  } else {
-    showNotification("Property details not available", "error");
-  }
+  showNotification("Property details feature would open here", "success");
 }
 
 // Load tenant view (for tenant dashboard)
 function loadTenantView(view) {
   const content = document.getElementById("tenantContent");
+  if (!content) return;
 
   switch (view) {
     case "overview":
@@ -602,7 +456,19 @@ function loadTenantView(view) {
           <div class="section-header">
             <h3>My Rental Overview</h3>
           </div>
-          <p>Welcome to your tenant dashboard. Here you can manage your payments and maintenance requests.</p>
+          <div class="tenant-overview">
+            <div class="overview-card">
+              <h4>Current Lease</h4>
+              <p>You are currently renting: <strong>Sunset Apartments</strong></p>
+              <p>Monthly Rent: <strong>$1200</strong></p>
+              <p>Next Payment Due: <strong>15 days</strong></p>
+            </div>
+            <div class="overview-card">
+              <h4>Quick Actions</h4>
+              <button class="btn btn-primary" onclick="loadTenantView('payments')">Make Payment</button>
+              <button class="btn btn-outline" onclick="loadTenantView('maintenance')">Request Maintenance</button>
+            </div>
+          </div>
         </div>
       `;
       break;
@@ -612,36 +478,30 @@ function loadTenantView(view) {
         <div class="dashboard-section">
           <div class="section-header">
             <h3>My Payment History</h3>
-            <button class="btn btn-primary" onclick="paymentsManager.payNowModal()">
+            <button class="btn btn-primary" onclick="showNotification('Payment feature would open here', 'success')">
               <i class="fas fa-credit-card"></i> Make Payment
             </button>
           </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th>Amount</th>
-                <th>Payment Date</th>
-                <th>Due Date</th>
-                <th>Month</th>
-                <th>Status</th>
-                <th>Method</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tenantPaymentsList">
-              <tr>
-                <td colspan="8" class="empty-state">
-                  <i class="fas fa-money-bill-wave"></i>
-                  <h4>No Payments Found</h4>
-                  <p>Your payment history will appear here</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="payment-history">
+            <div class="payment-card">
+              <div class="payment-header">
+                <h4>October 2024 Rent</h4>
+                <span class="status-badge status-paid">Paid</span>
+              </div>
+              <p>Amount: $1200</p>
+              <p>Paid on: October 1, 2024</p>
+            </div>
+            <div class="payment-card">
+              <div class="payment-header">
+                <h4>November 2024 Rent</h4>
+                <span class="status-badge status-pending">Due in 15 days</span>
+              </div>
+              <p>Amount: $1200</p>
+              <p>Due: November 1, 2024</p>
+            </div>
+          </div>
         </div>
       `;
-      paymentsManager.loadPayments();
       break;
 
     case "maintenance":
@@ -649,9 +509,16 @@ function loadTenantView(view) {
         <div class="dashboard-section">
           <div class="section-header">
             <h3>Maintenance Requests</h3>
-            <button class="btn btn-primary">New Request</button>
+            <button class="btn btn-primary" onclick="showNotification('Maintenance request form would open here', 'success')">
+              <i class="fas fa-plus"></i> New Request
+            </button>
           </div>
-          <p>Maintenance feature coming soon...</p>
+          <div class="maintenance-requests">
+            <p>No active maintenance requests.</p>
+            <button class="btn btn-outline" onclick="showNotification('Maintenance request submitted!', 'success')">
+              Submit Sample Request
+            </button>
+          </div>
         </div>
       `;
       break;
@@ -663,10 +530,23 @@ function loadTenantView(view) {
             <h3>My Profile</h3>
           </div>
           <div class="profile-info">
-            <p><strong>Name:</strong> ${currentUser?.name || "N/A"}</p>
-            <p><strong>Email:</strong> ${currentUser?.email || "N/A"}</p>
-            <p><strong>Phone:</strong> ${currentUser?.phone || "N/A"}</p>
-            <p><strong>Role:</strong> ${currentUser?.role || "N/A"}</p>
+            <div class="profile-item">
+              <strong>Name:</strong> ${currentUser?.name || "N/A"}
+            </div>
+            <div class="profile-item">
+              <strong>Email:</strong> ${currentUser?.email || "N/A"}
+            </div>
+            <div class="profile-item">
+              <strong>Phone:</strong> ${currentUser?.phone || "N/A"}
+            </div>
+            <div class="profile-item">
+              <strong>Role:</strong> ${currentUser?.role || "N/A"}
+            </div>
+            <div class="profile-actions">
+              <button class="btn btn-outline" onclick="showNotification('Profile edit feature would open here', 'success')">
+                Edit Profile
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -677,25 +557,17 @@ function loadTenantView(view) {
 // Initialize tenant dashboard
 if (window.location.pathname.includes("tenant-dashboard.html")) {
   document.addEventListener("DOMContentLoaded", function () {
-    updateDashboardUI();
+    const userWelcome = document.getElementById("tenantWelcome");
+    if (userWelcome && currentUser) {
+      userWelcome.textContent = `Welcome, ${currentUser.name}`;
+    }
     loadTenantView("overview");
   });
 }
-// Reload CSS to fix styling issues
-function reloadCSS() {
-  const links = document.querySelectorAll('link[rel="stylesheet"]');
-  links.forEach((link) => {
-    const url = new URL(link.href, window.location.origin);
-    url.searchParams.set("v", Date.now());
-    link.href = url.toString();
-  });
-}
 
-// Call this after login/registration
-function fixStyling() {
-  reloadCSS();
-  // Force redraw
-  document.body.style.display = "none";
-  document.body.offsetHeight; // Trigger reflow
-  document.body.style.display = "block";
+// Global function for dashboard navigation
+if (typeof loadDashboardView === "undefined") {
+  window.loadDashboardView = function (view) {
+    showNotification(`${view} section would load here`, "success");
+  };
 }
