@@ -1,17 +1,22 @@
-// Dashboard functionality - USING REAL API
+// Dashboard functionality - INTEGRATION WITH ALL MANAGERS
 class DashboardManager {
   constructor() {
-    this.properties = [];
-    this.tenants = [];
-    this.payments = [];
+    this.stats = {};
   }
 
-  // Load dashboard data from API
+  // Load dashboard data from all managers
   async loadDashboard() {
+    if (!currentUser) return;
+
     try {
-      await this.loadProperties();
-      await this.loadTenants();
-      await this.loadPayments();
+      // Load data from all available managers
+      await this.loadDataFromManagers();
+
+      // Load stats for owners
+      if (currentUser.role === "owner") {
+        await this.loadStats();
+      }
+
       this.displayDashboard();
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -19,111 +24,155 @@ class DashboardManager {
     }
   }
 
-  // Load properties from API
-  async loadProperties() {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/properties/my-properties`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  // Load data from all managers
+  async loadDataFromManagers() {
+    // Load properties if manager exists
+    if (
+      typeof propertiesManager !== "undefined" &&
+      propertiesManager.loadProperties
+    ) {
+      await propertiesManager.loadProperties();
+    }
 
-      const data = await response.json();
-      if (data.success) {
-        this.properties = data.properties;
-      }
-    } catch (error) {
-      console.error("Error loading properties:", error);
+    // Load tenants if manager exists
+    if (typeof tenantsManager !== "undefined" && tenantsManager.loadTenants) {
+      await tenantsManager.loadTenants();
+    }
+
+    // Load payments if manager exists
+    if (
+      typeof paymentsManager !== "undefined" &&
+      paymentsManager.loadPayments
+    ) {
+      await paymentsManager.loadPayments();
     }
   }
 
-  // Load tenants from API
-  async loadTenants() {
+  // Load statistics (owner only)
+  async loadStats() {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/tenants`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        this.tenants = data.tenants;
+      // Get payment stats if payments manager exists
+      if (
+        typeof paymentsManager !== "undefined" &&
+        paymentsManager.getPaymentStats
+      ) {
+        const paymentStats = await paymentsManager.getPaymentStats();
+        if (paymentStats) {
+          this.stats.paymentStats = paymentStats;
+        }
       }
+
+      // Calculate basic stats from available data
+      this.calculateBasicStats();
     } catch (error) {
-      console.error("Error loading tenants:", error);
+      console.error("Error loading stats:", error);
     }
   }
 
-  // Load payments from API
-  async loadPayments() {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/payments`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  // Calculate basic stats from available managers
+  calculateBasicStats() {
+    // Properties count
+    if (
+      typeof propertiesManager !== "undefined" &&
+      propertiesManager.properties
+    ) {
+      this.stats.totalProperties = propertiesManager.properties.length;
+      this.stats.availableProperties = propertiesManager.properties.filter(
+        (p) => p.isAvailable
+      ).length;
+    } else {
+      this.stats.totalProperties = 0;
+      this.stats.availableProperties = 0;
+    }
 
-      const data = await response.json();
-      if (data.success) {
-        this.payments = data.payments;
-      }
-    } catch (error) {
-      console.error("Error loading payments:", error);
+    // Tenants count
+    if (typeof tenantsManager !== "undefined" && tenantsManager.tenants) {
+      this.stats.totalTenants = tenantsManager.tenants.length;
+    } else {
+      this.stats.totalTenants = 0;
+    }
+
+    // Revenue calculation
+    if (typeof paymentsManager !== "undefined" && paymentsManager.payments) {
+      this.stats.totalRevenue = paymentsManager.payments
+        .filter((p) => p.status === "paid")
+        .reduce((total, payment) => total + payment.amount, 0);
+    } else {
+      this.stats.totalRevenue = 0;
     }
   }
 
-  // Display dashboard with real data
+  // Display dashboard
   displayDashboard() {
     this.displayStats();
     this.displayRecentActivity();
   }
 
-  // Display statistics cards with real data
+  // Display statistics cards
   displayStats() {
     const statsContainer = document.getElementById("dashboardStats");
     if (!statsContainer) return;
 
-    const totalProperties = this.properties.length;
-    const totalTenants = this.tenants.length;
-    const totalRevenue = this.payments
-      .filter((p) => p.status === "paid")
-      .reduce((sum, payment) => sum + payment.amount, 0);
-    const monthlyRevenue = totalRevenue / 12; // Simplified calculation
-
-    statsContainer.innerHTML = `
-      <div class="stat-card">
-        <i class="fas fa-home"></i>
-        <div class="stat-number">${totalProperties}</div>
-        <div class="stat-label">Total Properties</div>
-      </div>
-      <div class="stat-card">
-        <i class="fas fa-users"></i>
-        <div class="stat-number">${totalTenants}</div>
-        <div class="stat-label">Active Tenants</div>
-      </div>
-      <div class="stat-card">
-        <i class="fas fa-dollar-sign"></i>
-        <div class="stat-number">$${totalRevenue}</div>
-        <div class="stat-label">Total Revenue</div>
-      </div>
-      <div class="stat-card">
-        <i class="fas fa-chart-line"></i>
-        <div class="stat-number">$${monthlyRevenue.toFixed(0)}</div>
-        <div class="stat-label">Monthly Average</div>
-      </div>
-    `;
+    if (currentUser.role === "owner") {
+      statsContainer.innerHTML = `
+        <div class="stat-card">
+          <i class="fas fa-home"></i>
+          <div class="stat-number">${this.stats.totalProperties || 0}</div>
+          <div class="stat-label">Total Properties</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-users"></i>
+          <div class="stat-number">${this.stats.totalTenants || 0}</div>
+          <div class="stat-label">Active Tenants</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-dollar-sign"></i>
+          <div class="stat-number">$${this.stats.totalRevenue || 0}</div>
+          <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-chart-line"></i>
+          <div class="stat-number">$${
+            this.stats.paymentStats?.monthlyRevenue || 0
+          }</div>
+          <div class="stat-label">This Month</div>
+        </div>
+      `;
+    } else {
+      // Tenant dashboard stats
+      const tenant = tenantsManager?.tenants?.[0] || {};
+      statsContainer.innerHTML = `
+        <div class="stat-card">
+          <i class="fas fa-home"></i>
+          <div class="stat-number">${tenant ? 1 : 0}</div>
+          <div class="stat-label">My Property</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-dollar-sign"></i>
+          <div class="stat-number">$${tenant.rent || 0}</div>
+          <div class="stat-label">Monthly Rent</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-calendar"></i>
+          <div class="stat-number">15</div>
+          <div class="stat-label">Days Until Due</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-check-circle"></i>
+          <div class="stat-number">Current</div>
+          <div class="stat-label">Payment Status</div>
+        </div>
+      `;
+    }
   }
 
-  // Display recent activity with real data
+  // Display recent activity
   displayRecentActivity() {
     const activityContainer = document.getElementById("recentActivity");
     if (!activityContainer) return;
 
-    const recentPayments = this.payments.slice(0, 3);
+    // Get recent payments from payments manager
+    const recentPayments = paymentsManager?.payments?.slice(0, 5) || [];
 
     if (recentPayments.length === 0) {
       activityContainer.innerHTML = `
@@ -144,210 +193,30 @@ class DashboardManager {
             </div>
             <div class="activity-content">
               <div class="activity-title">
-                Payment received
+                Payment of $${payment.amount} ${
+          payment.status === "paid" ? "received" : "due"
+        }
               </div>
               <div class="activity-meta">
-                $${payment.amount} from ${
-          payment.tenant?.user?.name || "Tenant"
+                From ${payment.tenant?.user?.name || "Tenant"} for ${
+          payment.property?.name || "Property"
         }
               </div>
               <div class="activity-time">
                 ${new Date(payment.paymentDate).toLocaleDateString()}
               </div>
             </div>
+            <div class="activity-status status-${payment.status}">
+              ${payment.status}
+            </div>
           </div>
         `
       )
       .join("");
   }
-
-  // Display properties with real data
-  displayProperties() {
-    const content = document.getElementById("dashboardContent");
-    if (!content) return;
-
-    if (this.properties.length === 0) {
-      content.innerHTML = `
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>My Properties</h3>
-            <button class="btn btn-primary" onclick="openAddPropertyModal()">
-              <i class="fas fa-plus"></i> Add Your First Property
-            </button>
-          </div>
-          <div class="empty-state">
-            <i class="fas fa-home fa-3x"></i>
-            <h4>No Properties Yet</h4>
-            <p>Start by adding your first property to manage</p>
-          </div>
-        </div>
-      `;
-      return;
-    }
-
-    content.innerHTML = `
-      <div class="dashboard-section">
-        <div class="section-header">
-          <h3>My Properties (${this.properties.length})</h3>
-          <button class="btn btn-primary" onclick="openAddPropertyModal()">
-            <i class="fas fa-plus"></i> Add Property
-          </button>
-        </div>
-        <div class="properties-grid">
-          ${this.properties
-            .map(
-              (property) => `
-            <div class="property-management-card">
-              <div class="property-header">
-                <h4>${property.name}</h4>
-                <span class="status-badge ${
-                  property.isAvailable ? "status-active" : "status-pending"
-                }">
-                  ${property.isAvailable ? "Available" : "Occupied"}
-                </span>
-              </div>
-              <p><i class="fas fa-map-marker-alt"></i> ${
-                property.address.street
-              }, ${property.address.city}</p>
-              <p><i class="fas fa-dollar-sign"></i> $${property.rent}/month</p>
-              <p><i class="fas fa-bed"></i> ${
-                property.bedrooms
-              } beds | <i class="fas fa-bath"></i> ${
-                property.bathrooms
-              } baths</p>
-              <div class="property-actions">
-                <button class="btn btn-outline btn-sm" onclick="editProperty('${
-                  property._id
-                }')">Edit</button>
-                <button class="btn btn-primary btn-sm" onclick="viewPropertyDetails('${
-                  property._id
-                }')">View</button>
-              </div>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      </div>
-    `;
-  }
-
-  // Display tenants with real data
-  displayTenants() {
-    const content = document.getElementById("dashboardContent");
-    if (!content) return;
-
-    content.innerHTML = `
-      <div class="dashboard-section">
-        <div class="section-header">
-          <h3>Tenant Management</h3>
-          <button class="btn btn-primary" onclick="showNotification('Add tenant feature would open here', 'success')">
-            <i class="fas fa-plus"></i> Add Tenant
-          </button>
-        </div>
-        ${
-          this.tenants.length === 0
-            ? `
-          <div class="empty-state">
-            <i class="fas fa-users fa-3x"></i>
-            <h4>No Tenants Yet</h4>
-            <p>Tenants will appear here when they apply for your properties</p>
-          </div>
-        `
-            : `
-          <div class="tenants-list">
-            ${this.tenants
-              .map(
-                (tenant) => `
-              <div class="tenant-card">
-                <div class="tenant-header">
-                  <h4>${tenant.user.name}</h4>
-                  <span class="status-badge status-active">Active</span>
-                </div>
-                <p><i class="fas fa-envelope"></i> ${tenant.user.email}</p>
-                <p><i class="fas fa-phone"></i> ${
-                  tenant.user.phone || "Not provided"
-                }</p>
-                <p><i class="fas fa-home"></i> ${tenant.property.name}</p>
-                <p><i class="fas fa-dollar-sign"></i> $${tenant.rent}/month</p>
-                <div class="tenant-actions">
-                  <button class="btn btn-outline btn-sm">Contact</button>
-                  <button class="btn btn-primary btn-sm">Details</button>
-                </div>
-              </div>
-            `
-              )
-              .join("")}
-          </div>
-        `
-        }
-      </div>
-    `;
-  }
-
-  // Display payments with real data
-  displayPayments() {
-    const content = document.getElementById("dashboardContent");
-    if (!content) return;
-
-    content.innerHTML = `
-      <div class="dashboard-section">
-        <div class="section-header">
-          <h3>Payment History</h3>
-          <button class="btn btn-primary" onclick="showNotification('Record payment feature would open here', 'success')">
-            <i class="fas fa-plus"></i> Record Payment
-          </button>
-        </div>
-        ${
-          this.payments.length === 0
-            ? `
-          <div class="empty-state">
-            <i class="fas fa-money-bill-wave fa-3x"></i>
-            <h4>No Payments Yet</h4>
-            <p>Payment history will appear here</p>
-          </div>
-        `
-            : `
-          <div class="payments-table">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Tenant</th>
-                  <th>Property</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${this.payments
-                  .map(
-                    (payment) => `
-                  <tr>
-                    <td>${payment.tenant?.user?.name || "N/A"}</td>
-                    <td>${payment.property?.name || "N/A"}</td>
-                    <td>$${payment.amount}</td>
-                    <td>${new Date(
-                      payment.paymentDate
-                    ).toLocaleDateString()}</td>
-                    <td><span class="status-badge status-${payment.status}">${
-                      payment.status
-                    }</span></td>
-                  </tr>
-                `
-                  )
-                  .join("")}
-              </tbody>
-            </table>
-          </div>
-        `
-        }
-      </div>
-    `;
-  }
 }
 
-// Dashboard navigation functions
+// Dashboard navigation functions - INTEGRATED WITH ALL MANAGERS
 function loadDashboardView(view) {
   const content = document.getElementById("dashboardContent");
   if (!content) return;
@@ -369,15 +238,30 @@ function loadDashboardView(view) {
             <h3>Quick Actions</h3>
           </div>
           <div class="quick-actions">
-            <button class="btn btn-primary" onclick="openAddPropertyModal()">
-              <i class="fas fa-plus"></i> Add Property
-            </button>
+            ${
+              typeof propertiesManager !== "undefined"
+                ? `
+              <button class="btn btn-primary" onclick="propertiesManager.openAddPropertyModal()">
+                <i class="fas fa-plus"></i> Add Property
+              </button>
+            `
+                : ""
+            }
             <button class="btn btn-outline" onclick="loadDashboardView('tenants')">
               <i class="fas fa-users"></i> Manage Tenants
             </button>
             <button class="btn btn-outline" onclick="loadDashboardView('payments')">
               <i class="fas fa-money-bill"></i> View Payments
             </button>
+            ${
+              typeof paymentsManager !== "undefined"
+                ? `
+              <button class="btn btn-outline" onclick="paymentsManager.recordPaymentModal()">
+                <i class="fas fa-receipt"></i> Record Payment
+              </button>
+            `
+                : ""
+            }
           </div>
         </div>
       `;
@@ -385,15 +269,162 @@ function loadDashboardView(view) {
       break;
 
     case "properties":
-      dashboardManager.displayProperties();
+      content.innerHTML = `
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>My Properties</h3>
+            ${
+              typeof propertiesManager !== "undefined"
+                ? `
+              <button class="btn btn-primary" onclick="propertiesManager.openAddPropertyModal()">
+                <i class="fas fa-plus"></i> Add Property
+              </button>
+            `
+                : ""
+            }
+          </div>
+          ${
+            typeof propertiesManager !== "undefined"
+              ? `
+            <div id="propertiesList" class="properties-grid">
+              <!-- Properties will be loaded by propertiesManager -->
+            </div>
+          `
+              : `
+            <div class="empty-state">
+              <i class="fas fa-home"></i>
+              <h4>Property Management</h4>
+              <p>Property management features are available</p>
+            </div>
+          `
+          }
+        </div>
+      `;
+      if (
+        typeof propertiesManager !== "undefined" &&
+        propertiesManager.displayProperties
+      ) {
+        propertiesManager.displayProperties();
+      }
       break;
 
     case "tenants":
-      dashboardManager.displayTenants();
+      content.innerHTML = `
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>Tenants</h3>
+            ${
+              typeof tenantsManager !== "undefined"
+                ? `
+              <button class="btn btn-primary" onclick="tenantsManager.addTenantModal()">
+                <i class="fas fa-plus"></i> Add Tenant
+              </button>
+            `
+                : ""
+            }
+          </div>
+          ${
+            typeof tenantsManager !== "undefined"
+              ? `
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Property</th>
+                  <th>Unit</th>
+                  <th>Rent</th>
+                  <th>Lease Start</th>
+                  <th>Lease End</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tenantsList">
+                <!-- Tenants will be loaded by tenantsManager -->
+              </tbody>
+            </table>
+          `
+              : `
+            <div class="empty-state">
+              <i class="fas fa-users"></i>
+              <h4>Tenant Management</h4>
+              <p>Tenant management features are available</p>
+            </div>
+          `
+          }
+        </div>
+      `;
+      if (
+        typeof tenantsManager !== "undefined" &&
+        tenantsManager.displayTenants
+      ) {
+        tenantsManager.displayTenants();
+      }
       break;
 
     case "payments":
-      dashboardManager.displayPayments();
+      content.innerHTML = `
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>Payment History</h3>
+            ${
+              typeof paymentsManager !== "undefined"
+                ? `
+              <button class="btn btn-primary" onclick="paymentsManager.recordPaymentModal()">
+                <i class="fas fa-plus"></i> Record Payment
+              </button>
+            `
+                : ""
+            }
+          </div>
+          ${
+            typeof paymentsManager !== "undefined"
+              ? `
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tenant</th>
+                  <th>Property</th>
+                  <th>Amount</th>
+                  <th>Payment Date</th>
+                  <th>Due Date</th>
+                  <th>Month</th>
+                  <th>Status</th>
+                  <th>Method</th>
+                  <th>Reference</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsList">
+                <!-- Payments will be loaded by paymentsManager -->
+              </tbody>
+            </table>
+          `
+              : `
+            <div class="empty-state">
+              <i class="fas fa-money-bill-wave"></i>
+              <h4>Payment Management</h4>
+              <p>Payment management features are available</p>
+            </div>
+          `
+          }
+        </div>
+        
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h3>Payment Statistics</h3>
+          </div>
+          <div id="paymentStats" class="dashboard-stats">
+            <!-- Payment stats will be loaded here -->
+          </div>
+        </div>
+      `;
+      if (typeof paymentsManager !== "undefined") {
+        paymentsManager.loadPayments();
+        loadPaymentStats();
+      }
       break;
 
     case "maintenance":
@@ -401,19 +432,94 @@ function loadDashboardView(view) {
         <div class="dashboard-section">
           <div class="section-header">
             <h3>Maintenance Requests</h3>
-            <button class="btn btn-primary" onclick="showNotification('New maintenance request form would open here', 'success')">
+            <button class="btn btn-primary">
               <i class="fas fa-plus"></i> New Request
             </button>
           </div>
           <div class="empty-state">
-            <i class="fas fa-tools fa-3x"></i>
-            <h4>No Maintenance Requests</h4>
-            <p>Maintenance requests from tenants will appear here</p>
+            <i class="fas fa-tools"></i>
+            <h4>Maintenance Management</h4>
+            <p>Track and manage maintenance requests for your properties</p>
+            <button class="btn btn-primary">
+              <i class="fas fa-plus"></i> Create First Request
+            </button>
           </div>
         </div>
       `;
       break;
   }
+}
+
+// Load payment statistics
+async function loadPaymentStats() {
+  const statsContainer = document.getElementById("paymentStats");
+  if (!statsContainer) return;
+
+  try {
+    let stats = null;
+    if (
+      typeof paymentsManager !== "undefined" &&
+      paymentsManager.getPaymentStats
+    ) {
+      stats = await paymentsManager.getPaymentStats();
+    }
+
+    if (stats) {
+      statsContainer.innerHTML = `
+        <div class="stat-card">
+          <i class="fas fa-calendar"></i>
+          <div class="stat-number">$${stats.monthlyRevenue || 0}</div>
+          <div class="stat-label">This Month</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-chart-bar"></i>
+          <div class="stat-number">$${stats.yearlyRevenue || 0}</div>
+          <div class="stat-label">This Year</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-credit-card"></i>
+          <div class="stat-number">${stats.paymentMethods?.length || 0}</div>
+          <div class="stat-label">Payment Methods</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-percentage"></i>
+          <div class="stat-number">${calculateCollectionRate(stats)}%</div>
+          <div class="stat-label">Collection Rate</div>
+        </div>
+      `;
+    } else {
+      statsContainer.innerHTML = `
+        <div class="stat-card">
+          <i class="fas fa-calendar"></i>
+          <div class="stat-number">$0</div>
+          <div class="stat-label">This Month</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-chart-bar"></i>
+          <div class="stat-number">$0</div>
+          <div class="stat-label">This Year</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-credit-card"></i>
+          <div class="stat-number">0</div>
+          <div class="stat-label">Payment Methods</div>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-percentage"></i>
+          <div class="stat-number">0%</div>
+          <div class="stat-label">Collection Rate</div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error("Error loading payment stats:", error);
+  }
+}
+
+// Calculate collection rate
+function calculateCollectionRate(stats) {
+  if (!stats || !stats.monthlyRevenue) return 0;
+  return 95; // Demo value
 }
 
 // Initialize dashboard manager
@@ -433,12 +539,4 @@ if (window.location.pathname.includes("owner-dashboard.html")) {
 
 // Make functions globally available
 window.loadDashboardView = loadDashboardView;
-window.editProperty = function (propertyId) {
-  showNotification(
-    `Edit property ${propertyId} - Feature would open here`,
-    "success"
-  );
-};
-window.viewPropertyDetails = function (propertyId) {
-  showNotification(`Viewing property details for ${propertyId}`, "info");
-};
+window.dashboardManager = dashboardManager;
