@@ -77,7 +77,7 @@ function updateDashboardUI() {
   }
 }
 
-// Redirect to appropriate dashboard
+// Redirect to appropriate dashboard after login
 function redirectToDashboard() {
   if (currentUser) {
     if (currentUser.role === "owner") {
@@ -86,6 +86,13 @@ function redirectToDashboard() {
       window.location.href = "dashboard/tenant-dashboard.html";
     }
   }
+}
+
+// Update the login and register success handlers:
+// In handleLogin and handleRegister functions, after successful auth:
+if (data.success) {
+  // ... existing code ...
+  redirectToDashboard(); // Add this line
 }
 
 // Setup all event listeners
