@@ -705,6 +705,39 @@ function loadTenantView(view) {
                 </div>
             `;
       break;
+    // In dashboard.js - UPDATE applications section
+    case "applications":
+      content.innerHTML = `
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h3>Tenant Applications</h3>
+            </div>
+            <div id="applicationsList" class="applications-grid">
+                <div class="empty-state">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>Loading Applications...</h3>
+                </div>
+            </div>
+        </div>
+    `;
+      // Load applications with error handling
+      setTimeout(() => {
+        if (
+          typeof applicationsManager !== "undefined" &&
+          applicationsManager.loadApplications
+        ) {
+          applicationsManager.loadApplications();
+        } else {
+          document.getElementById("applicationsList").innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-file-alt"></i>
+                    <h4>Applications Feature</h4>
+                    <p>Applications system will be available soon</p>
+                </div>
+            `;
+        }
+      }, 100);
+      break;
   }
 }
 
