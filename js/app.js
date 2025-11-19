@@ -88,13 +88,6 @@ function redirectToDashboard() {
   }
 }
 
-// Update the login and register success handlers:
-// In handleLogin and handleRegister functions, after successful auth:
-if (data.success) {
-  // ... existing code ...
-  redirectToDashboard(); // Add this line
-}
-
 // Setup all event listeners
 function setupEventListeners() {
   // Auth buttons
@@ -429,6 +422,36 @@ function viewPropertyDetails(propertyId) {
     propertiesManager.viewProperty(propertyId);
   } else {
     showNotification("Property details feature would open here", "success");
+  }
+}
+
+// In app.js - ADD dashboard navigation helper
+function navigateToDashboard() {
+  if (!currentUser) {
+    showNotification("Please login first", "error");
+    openModal("loginModal");
+    return;
+  }
+
+  redirectToDashboard();
+}
+
+// UPDATE the existing redirectToDashboard function
+function redirectToDashboard() {
+  if (currentUser) {
+    if (currentUser.role === "owner") {
+      // Check if we're already on the owner dashboard
+      if (window.location.pathname.includes("owner-dashboard")) {
+        return; // Already on the correct page
+      }
+      window.location.href = "dashboard/owner-dashboard.html";
+    } else {
+      // Check if we're already on the tenant dashboard
+      if (window.location.pathname.includes("tenant-dashboard")) {
+        return; // Already on the correct page
+      }
+      window.location.href = "dashboard/tenant-dashboard.html";
+    }
   }
 }
 

@@ -549,3 +549,407 @@
     grid-template-columns: 1fr;
   }
 }
+/* Maintenance Styles */
+.maintenance-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.maintenance-card {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--primary);
+}
+
+.maintenance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.maintenance-header h4 {
+  margin: 0;
+  color: var(--dark);
+}
+
+.priority-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.priority-low {
+  background: #d4edda;
+  color: #155724;
+}
+
+.priority-medium {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.priority-high {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.priority-emergency {
+  background: #dc3545;
+  color: white;
+}
+
+.maintenance-content p {
+  margin-bottom: 1rem;
+  color: var(--gray);
+}
+
+.maintenance-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+.maintenance-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.maintenance-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.maintenance-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Overview Styles */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.overview-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--primary);
+}
+
+.overview-card h4 {
+  margin: 0 0 1rem 0;
+  color: var(--dark);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.overview-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  color: var(--gray);
+  font-weight: 500;
+}
+
+.stat-value {
+  color: var(--dark);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.tenants-info {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--primary);
+}
+
+.tenants-info p {
+  margin: 0;
+  color: var(--gray);
+}
+/* Maintenance Styles */
+.maintenance-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.maintenance-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--primary);
+}
+
+.maintenance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.maintenance-header h4 {
+  margin: 0;
+  color: var(--dark);
+  font-size: 1.1rem;
+}
+
+.priority-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.priority-low {
+  background: #d4edda;
+  color: #155724;
+  border-left-color: #28a745;
+}
+
+.priority-medium {
+  background: #fff3cd;
+  color: #856404;
+  border-left-color: #ffc107;
+}
+
+.priority-high {
+  background: #f8d7da;
+  color: #721c24;
+  border-left-color: #dc3545;
+}
+
+.priority-emergency {
+  background: #dc3545;
+  color: white;
+  border-left-color: #dc3545;
+}
+
+.maintenance-content p {
+  margin-bottom: 1rem;
+  color: var(--gray);
+  line-height: 1.5;
+}
+
+.maintenance-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+.maintenance-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.maintenance-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.maintenance-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Status badges for maintenance */
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-in-progress {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+/* Tenant-specific styles */
+.documents-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.document-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--primary);
+}
+
+.document-icon {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-right: 1rem;
+}
+
+.document-content {
+  flex: 1;
+}
+
+.document-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--dark);
+}
+
+.document-content p {
+  margin: 0.25rem 0;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Profile styles */
+.profile-item {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+}
+
+.profile-item strong {
+  color: var(--dark);
+  display: inline-block;
+  min-width: 120px;
+}
+/* Applications Styles */
+.applications-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.application-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid var(--primary);
+}
+
+.application-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.application-header h4 {
+  margin: 0;
+  color: var(--dark);
+}
+
+.applicant-info h5,
+.application-message h5,
+.application-references h5 {
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.application-message p,
+.application-references p {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  font-style: italic;
+}
+
+.application-meta {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+  color: var(--gray);
+  font-size: 0.9rem;
+}
+
+.application-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Status badges for applications */
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}

@@ -57,12 +57,13 @@
       <div class="nav-container">
         <div class="logo">
           <i class="fas fa-home"></i>
-          <span>SmartRent - Tenant</span>
+          <span>Rent Manager - Tenant</span>
         </div>
         <div class="nav-links">
           <a href="#" onclick="loadTenantView('overview')">Overview</a>
           <a href="#" onclick="loadTenantView('payments')">My Payments</a>
           <a href="#" onclick="loadTenantView('maintenance')">Maintenance</a>
+          <a href="#" onclick="loadTenantView('properties')">Find Properties</a>
           <a href="#" onclick="loadTenantView('profile')">My Profile</a>
         </div>
         <div class="auth-buttons">
@@ -100,5 +101,268 @@
     <script src="../js/properties.js"></script>
     <script src="../js/tenants.js"></script>
     <script src="../js/payments.js"></script>
+    <script src="../js/maintenance.js"></script>
+
+    <script>
+      // NEW: Document management for tenants
+      class DocumentManager {
+        constructor() {
+          this.documents = [];
+        }
+
+        async loadDocuments() {
+          try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(`${API_BASE}/documents`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              this.documents = data.documents || [];
+              this.displayDocuments();
+            } else {
+              throw new Error(data.message);
+            }
+          } catch (error) {
+            console.error("Error loading documents:", error);
+            this.documents = [];
+            this.displayDocuments();
+          }
+        }
+
+        displayDocuments() {
+          const container = document.getElementById("documentsList");
+          if (!container) return;
+
+          if (this.documents.length === 0) {
+            container.innerHTML = this.getEmptyState();
+            return;
+          }
+
+          container.innerHTML = this.documents
+            .map(
+              (doc) => `
+            <div class="document-card">
+                <div class="document-icon">
+                    <i class="fas fa-file-${this.getFileIcon(doc.type)}"></i>
+                </div>
+                <div class="document-content">
+                    <h4>${doc.name}</h4>
+                    <p>Uploaded: ${new Date(
+                      doc.uploadedAt
+                    ).toLocaleDateString()}</p>
+                    <p>Type: ${doc.type}</p>
+                </div>
+                <div class="document-actions">
+                    <button class="btn btn-outline btn-sm" onclick="documentManager.downloadDocument('${
+                      doc._id
+                    }')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="documentManager.deleteDocument('${
+                      doc._id
+                    }')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `
+            )
+            .join("");
+        }
+
+        getFileIcon(fileType) {
+          const icons = {
+            pdf: "pdf",
+            image: "image",
+            word: "word",
+            excel: "excel",
+          };
+          return icons[fileType] || "alt";
+        }
+
+        getEmptyState() {
+          return `
+            <div class="empty-state">
+                <i class="fas fa-file-upload"></i>
+                <h4>No Documents Uploaded</h4>
+                <p>Upload your rental documents for easy access</p>
+                <button class="btn btn-primary" onclick="documentManager.openUploadModal()">
+                    <i class="fas fa-upload"></i> Upload First Document
+                </button>
+            </div>
+        `;
+        }
+
+        openUploadModal() {
+          const modalHTML = `
+            <div id="uploadDocumentModal" class="modal">
+                <div class="modal-content scrollable-modal" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h2>Upload Document</h2>
+                        <span class="close" onclick="closeModal('uploadDocumentModal')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <form id="uploadDocumentForm">
+                            <div class="form-group">
+                                <label for="documentName">Document Name</label>
+                                <input type="text" id="documentName" required placeholder="e.g., Lease Agreement, ID Proof">
+                            </div>
+                            <div class="form-group">
+                                <label for="documentType">Document Type</label>
+                                <select id="documentType" required>
+                                    <option value="">Select Type</option>
+                                    <option value="lease">Lease Agreement</option>
+                                    <option value="id">ID Proof</option>
+                                    <option value="income">Income Proof</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="documentFile">Select File</label>
+                                <input type="file" id="documentFile" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="closeModal('uploadDocumentModal')">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Upload Document</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+          document.body.insertAdjacentHTML("beforeend", modalHTML);
+          document
+            .getElementById("uploadDocumentForm")
+            .addEventListener("submit", (e) => this.handleDocumentUpload(e));
+          openModal("uploadDocumentModal");
+        }
+
+        async handleDocumentUpload(event) {
+          event.preventDefault();
+
+          const submitBtn = event.target.querySelector('button[type="submit"]');
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = "Uploading...";
+          submitBtn.disabled = true;
+
+          const formData = new FormData();
+          formData.append(
+            "name",
+            document.getElementById("documentName").value
+          );
+          formData.append(
+            "type",
+            document.getElementById("documentType").value
+          );
+          formData.append(
+            "file",
+            document.getElementById("documentFile").files[0]
+          );
+
+          try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(`${API_BASE}/documents/upload`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              showNotification("Document uploaded successfully!", "success");
+              closeModal("uploadDocumentModal");
+              await this.loadDocuments();
+            } else {
+              throw new Error(data.message);
+            }
+          } catch (error) {
+            console.error("Error uploading document:", error);
+            showNotification(
+              "Error uploading document: " + error.message,
+              "error"
+            );
+          } finally {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+          }
+        }
+
+        async downloadDocument(documentId) {
+          try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(
+              `${API_BASE}/documents/download/${documentId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "document.pdf";
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            } else {
+              throw new Error("Download failed");
+            }
+          } catch (error) {
+            console.error("Error downloading document:", error);
+            showNotification("Error downloading document", "error");
+          }
+        }
+
+        async deleteDocument(documentId) {
+          if (!confirm("Are you sure you want to delete this document?")) {
+            return;
+          }
+
+          try {
+            const token = localStorage.getItem("token");
+            const response = await fetch(
+              `${API_BASE}/documents/${documentId}`,
+              {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+              showNotification("Document deleted successfully!", "success");
+              await this.loadDocuments();
+            } else {
+              throw new Error(data.message);
+            }
+          } catch (error) {
+            console.error("Error deleting document:", error);
+            showNotification(
+              "Error deleting document: " + error.message,
+              "error"
+            );
+          }
+        }
+      }
+
+      const documentManager = new DocumentManager();
+    </script>
   </body>
 </html>
