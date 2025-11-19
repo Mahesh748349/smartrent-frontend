@@ -436,22 +436,41 @@ function navigateToDashboard() {
   redirectToDashboard();
 }
 
-// UPDATE the existing redirectToDashboard function
+// In app.js - UPDATE the redirectToDashboard function
 function redirectToDashboard() {
   if (currentUser) {
     if (currentUser.role === "owner") {
-      // Check if we're already on the owner dashboard
-      if (window.location.pathname.includes("owner-dashboard")) {
-        return; // Already on the correct page
-      }
       window.location.href = "dashboard/owner-dashboard.html";
     } else {
-      // Check if we're already on the tenant dashboard
-      if (window.location.pathname.includes("tenant-dashboard")) {
-        return; // Already on the correct page
-      }
       window.location.href = "dashboard/tenant-dashboard.html";
     }
+  }
+}
+
+// UPDATE the navigateToDashboard function
+function navigateToDashboard() {
+  if (!currentUser) {
+    showNotification("Please login first", "error");
+    openModal("loginModal");
+    return;
+  }
+
+  redirectToDashboard();
+}
+
+// UPDATE UI for logged in user - Fix dashboard button
+function updateUIForLoggedInUser() {
+  const authButtons = document.querySelector(".auth-buttons");
+  if (currentUser && authButtons) {
+    authButtons.innerHTML = `
+            <span style="margin-right: 15px; color: var(--primary); font-weight: 600;">
+                Welcome, ${currentUser.name}
+            </span>
+            <button class="btn btn-outline" id="logoutBtn">Logout</button>
+            <button class="btn btn-primary" onclick="navigateToDashboard()">Dashboard</button>
+        `;
+
+    document.getElementById("logoutBtn").addEventListener("click", logout);
   }
 }
 

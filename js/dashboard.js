@@ -1,7 +1,4 @@
-// =====================================================
-//  DASHBOARD MANAGER (FINAL CLEAN MERGED VERSION)
-// =====================================================
-
+// dashboard.js - COMPLETE FIXED VERSION WITH ALL FEATURES
 class DashboardManager {
   constructor() {
     this.stats = {};
@@ -25,38 +22,91 @@ class DashboardManager {
   }
 
   async loadDataFromManagers() {
-    if (propertiesManager?.loadProperties)
+    // Load properties if manager exists
+    if (
+      typeof propertiesManager !== "undefined" &&
+      propertiesManager.loadProperties
+    ) {
       await propertiesManager.loadProperties();
-    if (tenantsManager?.loadTenants) await tenantsManager.loadTenants();
-    if (paymentsManager?.loadPayments) await paymentsManager.loadPayments();
+    }
+
+    // Load tenants if manager exists
+    if (typeof tenantsManager !== "undefined" && tenantsManager.loadTenants) {
+      await tenantsManager.loadTenants();
+    }
+
+    // Load payments if manager exists
+    if (
+      typeof paymentsManager !== "undefined" &&
+      paymentsManager.loadPayments
+    ) {
+      await paymentsManager.loadPayments();
+    }
+
+    // Load applications if manager exists
+    if (
+      typeof applicationsManager !== "undefined" &&
+      applicationsManager.loadApplications
+    ) {
+      await applicationsManager.loadApplications();
+    }
   }
 
   async loadStats() {
     try {
-      if (paymentsManager?.getPaymentStats) {
+      // Try to get payment stats from backend
+      if (paymentsManager && paymentsManager.getPaymentStats) {
         const paymentStats = await paymentsManager.getPaymentStats();
         if (paymentStats) this.stats.paymentStats = paymentStats;
       }
+
+      // Calculate basic stats
       this.calculateBasicStats();
     } catch (error) {
       console.error("Error loading stats:", error);
+      this.calculateBasicStats(); // Fallback to basic stats
     }
   }
 
   calculateBasicStats() {
-    // Properties
-    this.stats.totalProperties = propertiesManager?.properties?.length || 0;
-    this.stats.availableProperties =
-      propertiesManager?.properties?.filter((p) => p.isAvailable).length || 0;
+    // Properties stats
+    if (propertiesManager && propertiesManager.properties) {
+      this.stats.totalProperties = propertiesManager.properties.length;
+      this.stats.availableProperties = propertiesManager.properties.filter(
+        (p) => p.isAvailable
+      ).length;
+    } else {
+      this.stats.totalProperties = 0;
+      this.stats.availableProperties = 0;
+    }
 
-    // Tenants
-    this.stats.totalTenants = tenantsManager?.tenants?.length || 0;
+    // Tenants stats
+    if (tenantsManager && tenantsManager.tenants) {
+      this.stats.totalTenants = tenantsManager.tenants.length;
+    } else {
+      this.stats.totalTenants = 0;
+    }
 
-    // Revenue
-    this.stats.totalRevenue =
-      paymentsManager?.payments
-        ?.filter((p) => p.status === "paid")
-        .reduce((t, p) => t + p.amount, 0) || 0;
+    // Revenue stats
+    if (paymentsManager && paymentsManager.payments) {
+      this.stats.totalRevenue = paymentsManager.payments
+        .filter((p) => p.status === "paid")
+        .reduce((total, p) => total + p.amount, 0);
+
+      this.stats.monthlyRevenue = this.stats.paymentStats?.monthlyRevenue || 0;
+    } else {
+      this.stats.totalRevenue = 0;
+      this.stats.monthlyRevenue = 0;
+    }
+
+    // Applications stats (for owner)
+    if (applicationsManager && applicationsManager.applications) {
+      this.stats.pendingApplications = applicationsManager.applications.filter(
+        (app) => app.status === "pending"
+      ).length;
+    } else {
+      this.stats.pendingApplications = 0;
+    }
   }
 
   displayDashboard() {
@@ -70,28 +120,30 @@ class DashboardManager {
 
     if (currentUser.role === "owner") {
       statsContainer.innerHTML = `
-        <div class="stat-card"><i class="fas fa-home"></i>
-          <div class="stat-number">${this.stats.totalProperties}</div>
-          <div class="stat-label">Total Properties</div>
-        </div>
+                <div class="stat-card">
+                    <i class="fas fa-home"></i>
+                    <div class="stat-number">${this.stats.totalProperties}</div>
+                    <div class="stat-label">Total Properties</div>
+                </div>
 
-        <div class="stat-card"><i class="fas fa-users"></i>
-          <div class="stat-number">${this.stats.totalTenants}</div>
-          <div class="stat-label">Active Tenants</div>
-        </div>
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-number">${this.stats.totalTenants}</div>
+                    <div class="stat-label">Active Tenants</div>
+                </div>
 
-        <div class="stat-card"><i class="fas fa-dollar-sign"></i>
-          <div class="stat-number">$${this.stats.totalRevenue}</div>
-          <div class="stat-label">Total Revenue</div>
-        </div>
+                <div class="stat-card">
+                    <i class="fas fa-dollar-sign"></i>
+                    <div class="stat-number">$${this.stats.totalRevenue}</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
 
-        <div class="stat-card"><i class="fas fa-chart-line"></i>
-          <div class="stat-number">$${
-            this.stats.paymentStats?.monthlyRevenue || 0
-          }</div>
-          <div class="stat-label">This Month</div>
-        </div>
-      `;
+                <div class="stat-card">
+                    <i class="fas fa-chart-line"></i>
+                    <div class="stat-number">$${this.stats.monthlyRevenue}</div>
+                    <div class="stat-label">This Month</div>
+                </div>
+            `;
     }
   }
 
@@ -99,38 +151,45 @@ class DashboardManager {
     const container = document.getElementById("recentActivity");
     if (!container) return;
 
-    const recentPayments = paymentsManager?.payments?.slice(0, 5) || [];
-
-    if (recentPayments.length === 0) {
+    // Show empty state if no payments
+    if (
+      !paymentsManager ||
+      !paymentsManager.payments ||
+      paymentsManager.payments.length === 0
+    ) {
       container.innerHTML = `
-        <div class="empty-activity">
-          <i class="fas fa-clock"></i><p>No recent activity</p>
-        </div>
-      `;
+                <div class="empty-activity">
+                    <i class="fas fa-clock"></i>
+                    <p>No recent activity</p>
+                </div>
+            `;
       return;
     }
 
+    const recentPayments = paymentsManager.payments.slice(0, 5);
     container.innerHTML = recentPayments
       .map(
         (p) => `
-        <div class="activity-item">
-          <div class="activity-icon"><i class="fas fa-money-bill-wave"></i></div>
-
-          <div class="activity-content">
-            <div class="activity-title">Payment of $${p.amount} ${
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Payment of $${p.amount} ${
           p.status === "paid" ? "received" : "due"
         }</div>
-            <div class="activity-meta">From ${
-              p.tenant?.user?.name || "Tenant"
-            } for ${p.property?.name || "Property"}</div>
-            <div class="activity-time">${new Date(
-              p.paymentDate
-            ).toLocaleDateString()}</div>
-          </div>
-
-          <div class="activity-status status-${p.status}">${p.status}</div>
-        </div>
-      `
+                        <div class="activity-meta">From ${
+                          p.tenant?.user?.name || "Tenant"
+                        } for ${p.property?.name || "Property"}</div>
+                        <div class="activity-time">${new Date(
+                          p.paymentDate
+                        ).toLocaleDateString()}</div>
+                    </div>
+                    <div class="activity-status status-${p.status}">${
+          p.status
+        }</div>
+                </div>
+            `
       )
       .join("");
   }
@@ -138,259 +197,265 @@ class DashboardManager {
 
 const dashboardManager = new DashboardManager();
 
-// =====================================================
-//   UNIFIED loadDashboardView() — FINAL VERSION
-// =====================================================
-// In dashboard.js - UPDATE existing loadDashboardView function
+// FIXED: loadDashboardView function WITH APPLICATIONS
 function loadDashboardView(view) {
   const content = document.getElementById("dashboardContent");
-  if (!content) return;
+  if (!content) {
+    console.error("Dashboard content element not found");
+    return;
+  }
 
   switch (view) {
-    // ---------------- Overview -----------------
     case "overview":
       content.innerHTML = `
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>Dashboard Overview</h3>
-          </div>
-          <div class="overview-grid">
-            <div class="overview-card">
-              <h4><i class="fas fa-home"></i> Properties Summary</h4>
-              <div class="overview-stats">
-                <div class="stat-item">
-                  <span class="stat-label">Total Properties:</span>
-                  <span class="stat-value" id="totalProperties">0</span>
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Dashboard Overview</h3>
+                    </div>
+                    <div id="dashboardStats" class="dashboard-stats">
+                        <!-- Stats will be loaded here -->
+                    </div>
                 </div>
-                <div class="stat-item">
-                  <span class="stat-label">Available:</span>
-                  <span class="stat-value" id="availableProperties">0</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-label">Occupied:</span>
-                  <span class="stat-value" id="occupiedProperties">0</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="overview-card">
-              <h4><i class="fas fa-users"></i> Tenants Summary</h4>
-              <div class="overview-stats">
-                <div class="stat-item">
-                  <span class="stat-label">Active Tenants:</span>
-                  <span class="stat-value" id="activeTenants">0</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-label">Pending Applications:</span>
-                  <span class="stat-value" id="pendingApplications">0</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="overview-card">
-              <h4><i class="fas fa-money-bill-wave"></i> Financial Summary</h4>
-              <div class="overview-stats">
-                <div class="stat-item">
-                  <span class="stat-label">Monthly Revenue:</span>
-                  <span class="stat-value" id="monthlyRevenue">$0</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-label">Pending Payments:</span>
-                  <span class="stat-value" id="pendingPayments">0</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>Recent Activity</h3>
-          </div>
-          <div id="recentActivity"></div>
-        </div>
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Recent Activity</h3>
+                    </div>
+                    <div id="recentActivity">
+                        <div class="empty-activity">
+                            <i class="fas fa-clock"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    </div>
+                </div>
 
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>Quick Actions</h3>
-          </div>
-          <div class="quick-actions">
-            <button class="btn btn-primary" onclick="loadDashboardView('properties'); propertiesManager.openAddPropertyModal()">
-              <i class="fas fa-plus"></i> Add Property
-            </button>
-            <button class="btn btn-outline" onclick="loadDashboardView('tenants')">
-              <i class="fas fa-users"></i> Manage Tenants
-            </button>
-            <button class="btn btn-outline" onclick="loadDashboardView('payments')">
-              <i class="fas fa-money-bill"></i> View Payments
-            </button>
-            <button class="btn btn-outline" onclick="paymentsManager.recordPaymentModal()">
-              <i class="fas fa-receipt"></i> Record Payment
-            </button>
-          </div>
-        </div>
-      `;
-      // Load real data for overview
-      this.loadOverviewData();
-      dashboardManager.displayRecentActivity();
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Quick Actions</h3>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="btn btn-primary" onclick="loadDashboardView('properties'); setTimeout(() => { if(propertiesManager) propertiesManager.openAddPropertyModal(); }, 100)">
+                            <i class="fas fa-plus"></i> Add Property
+                        </button>
+                        <button class="btn btn-outline" onclick="loadDashboardView('applications')">
+                            <i class="fas fa-file-alt"></i> View Applications
+                        </button>
+                        <button class="btn btn-outline" onclick="loadDashboardView('tenants')">
+                            <i class="fas fa-users"></i> Manage Tenants
+                        </button>
+                        <button class="btn btn-outline" onclick="loadDashboardView('payments')">
+                            <i class="fas fa-money-bill"></i> View Payments
+                        </button>
+                        <button class="btn btn-outline" onclick="if(paymentsManager) paymentsManager.recordPaymentModal()">
+                            <i class="fas fa-receipt"></i> Record Payment
+                        </button>
+                    </div>
+                </div>
+            `;
+      // Load stats and activity
+      setTimeout(() => {
+        if (dashboardManager) {
+          dashboardManager.loadDashboard();
+        }
+      }, 100);
       break;
 
-    // ---------------- Properties -----------------
     case "properties":
       content.innerHTML = `
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>My Properties</h3>
-            <button class="btn btn-primary" onclick="propertiesManager.openAddPropertyModal()">
-              <i class="fas fa-plus"></i> Add Property
-            </button>
-          </div>
-          <div id="propertiesList" class="properties-grid"></div>
-        </div>
-      `;
-      // Load owner's properties from backend
-      if (propertiesManager && propertiesManager.loadProperties) {
-        propertiesManager.loadProperties();
-      }
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>My Properties</h3>
+                        <button class="btn btn-primary" onclick="if(propertiesManager) propertiesManager.openAddPropertyModal()">
+                            <i class="fas fa-plus"></i> Add Property
+                        </button>
+                    </div>
+                    <div id="propertiesList" class="properties-grid">
+                        <div class="empty-state">
+                            <i class="fas fa-home"></i>
+                            <h3>Loading Properties...</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+      // Load properties
+      setTimeout(() => {
+        if (propertiesManager && propertiesManager.loadProperties) {
+          propertiesManager.loadProperties();
+        }
+      }, 100);
       break;
 
-    // ---------------- Tenants -----------------
+    case "applications":
+      content.innerHTML = `
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Tenant Applications</h3>
+                    </div>
+                    <div id="applicationsList" class="applications-grid">
+                        <div class="empty-state">
+                            <i class="fas fa-file-alt"></i>
+                            <h3>Loading Applications...</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+      // Load applications
+      setTimeout(() => {
+        if (
+          typeof applicationsManager !== "undefined" &&
+          applicationsManager.loadApplications
+        ) {
+          applicationsManager.loadApplications();
+        }
+      }, 100);
+      break;
+
     case "tenants":
       content.innerHTML = `
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>My Tenants</h3>
-          </div>
-          <div class="tenants-info">
-            <p>Tenants who have applied to or are occupying your properties will appear here.</p>
-          </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Property</th>
-                <th>Unit</th>
-                <th>Rent</th>
-                <th>Lease Start</th>
-                <th>Lease End</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tenantsList"></tbody>
-          </table>
-        </div>
-      `;
-      // Load owner's tenants from backend
-      if (tenantsManager && tenantsManager.loadTenants) {
-        tenantsManager.loadTenants();
-      }
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>My Tenants</h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Property</th>
+                                <th>Unit</th>
+                                <th>Rent</th>
+                                <th>Lease Start</th>
+                                <th>Lease End</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tenantsList">
+                            <tr>
+                                <td colspan="10" class="empty-state">
+                                    <i class="fas fa-users"></i>
+                                    <h4>Loading Tenants...</h4>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+      // Load tenants
+      setTimeout(() => {
+        if (tenantsManager && tenantsManager.loadTenants) {
+          tenantsManager.loadTenants();
+        }
+      }, 100);
       break;
 
-    // ---------------- Payments -----------------
     case "payments":
       content.innerHTML = `
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>Payment History</h3>
-            <button class="btn btn-primary" onclick="paymentsManager.recordPaymentModal()">
-              <i class="fas fa-plus"></i> Record Payment
-            </button>
-          </div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Tenant</th>
-                <th>Property</th>
-                <th>Amount</th>
-                <th>Payment Date</th>
-                <th>Due Date</th>
-                <th>Month</th>
-                <th>Status</th>
-                <th>Method</th>
-                <th>Reference</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="paymentsList"></tbody>
-          </table>
-        </div>
-      `;
-      // Load payments from backend
-      if (paymentsManager && paymentsManager.loadPayments) {
-        paymentsManager.loadPayments();
-      }
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Payment History</h3>
+                        <button class="btn btn-primary" onclick="if(paymentsManager) paymentsManager.recordPaymentModal()">
+                            <i class="fas fa-plus"></i> Record Payment
+                        </button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tenant</th>
+                                <th>Property</th>
+                                <th>Amount</th>
+                                <th>Payment Date</th>
+                                <th>Due Date</th>
+                                <th>Month</th>
+                                <th>Status</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsList">
+                            <tr>
+                                <td colspan="10" class="empty-state">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    <h4>Loading Payments...</h4>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Payment Statistics</h3>
+                    </div>
+                    <div id="paymentStats" class="dashboard-stats">
+                        <div class="stat-card">
+                            <i class="fas fa-calendar"></i>
+                            <div class="stat-number">$0</div>
+                            <div class="stat-label">This Month</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-chart-bar"></i>
+                            <div class="stat-number">$0</div>
+                            <div class="stat-label">This Year</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-credit-card"></i>
+                            <div class="stat-number">0</div>
+                            <div class="stat-label">Payment Methods</div>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-percentage"></i>
+                            <div class="stat-number">0%</div>
+                            <div class="stat-label">Collection Rate</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      // Load payments and stats
+      setTimeout(() => {
+        if (paymentsManager && paymentsManager.loadPayments) {
+          paymentsManager.loadPayments();
+        }
+        loadPaymentStats();
+      }, 100);
       break;
 
-    // ---------------- Maintenance -----------------
     case "maintenance":
       content.innerHTML = `
-        <div class="dashboard-section">
-          <div class="section-header">
-            <h3>Maintenance Requests</h3>
-          </div>
-          <div id="maintenanceList" class="maintenance-list"></div>
-        </div>
-      `;
-      // Load maintenance requests
-      if (
-        typeof maintenanceManager !== "undefined" &&
-        maintenanceManager.loadMaintenance
-      ) {
-        maintenanceManager.loadMaintenance();
-      }
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>Maintenance Requests</h3>
+                    </div>
+                    <div id="maintenanceList" class="maintenance-list">
+                        <div class="empty-state">
+                            <i class="fas fa-tools"></i>
+                            <h3>Loading Maintenance Requests...</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+      // Load maintenance
+      setTimeout(() => {
+        if (
+          typeof maintenanceManager !== "undefined" &&
+          maintenanceManager.loadMaintenance
+        ) {
+          maintenanceManager.loadMaintenance();
+        }
+      }, 100);
       break;
   }
 }
 
-// Add this new function to load overview data
-async function loadOverviewData() {
-  try {
-    // Load properties count
-    if (propertiesManager && propertiesManager.properties) {
-      document.getElementById("totalProperties").textContent =
-        propertiesManager.properties.length;
-      const available = propertiesManager.properties.filter(
-        (p) => p.isAvailable
-      ).length;
-      document.getElementById("availableProperties").textContent = available;
-      document.getElementById("occupiedProperties").textContent =
-        propertiesManager.properties.length - available;
-    }
-
-    // Load tenants count
-    if (tenantsManager && tenantsManager.tenants) {
-      document.getElementById("activeTenants").textContent =
-        tenantsManager.tenants.length;
-      // You might want to add pending applications logic
-      document.getElementById("pendingApplications").textContent = "0";
-    }
-
-    // Load financial data
-    if (paymentsManager && paymentsManager.payments) {
-      const monthlyRevenue = paymentsManager.payments
-        .filter((p) => p.status === "paid")
-        .reduce((total, p) => total + p.amount, 0);
-      document.getElementById(
-        "monthlyRevenue"
-      ).textContent = `$${monthlyRevenue}`;
-
-      const pending = paymentsManager.payments.filter(
-        (p) => p.status === "pending"
-      ).length;
-      document.getElementById("pendingPayments").textContent = pending;
-    }
-  } catch (error) {
-    console.error("Error loading overview data:", error);
-  }
-}
-
-// In dashboard.js - ADD proper tenant dashboard functionality
+// FIXED: Tenant dashboard view WITH ALL FEATURES
 function loadTenantView(view) {
   const content = document.getElementById("tenantContent");
-  if (!content) return;
+  if (!content) {
+    console.error("Tenant content element not found");
+    return;
+  }
 
   switch (view) {
     case "overview":
@@ -457,10 +522,10 @@ function loadTenantView(view) {
                         <h3>Quick Actions</h3>
                     </div>
                     <div class="quick-actions">
-                        <button class="btn btn-primary" onclick="loadTenantView('payments'); setTimeout(() => paymentsManager.payNowModal(), 100)">
+                        <button class="btn btn-primary" onclick="loadTenantView('payments'); setTimeout(() => { if(paymentsManager) paymentsManager.payNowModal(); }, 100)">
                             <i class="fas fa-credit-card"></i> Make Payment
                         </button>
-                        <button class="btn btn-outline" onclick="loadTenantView('maintenance'); setTimeout(() => maintenanceManager.openNewRequestModal(), 100)">
+                        <button class="btn btn-outline" onclick="loadTenantView('maintenance'); setTimeout(() => { if(maintenanceManager) maintenanceManager.openNewRequestModal(); }, 100)">
                             <i class="fas fa-tools"></i> Request Maintenance
                         </button>
                         <button class="btn btn-outline" onclick="loadTenantView('properties')">
@@ -481,7 +546,10 @@ function loadTenantView(view) {
                     </div>
                 </div>
             `;
-      loadTenantOverviewData();
+      // Load tenant overview data
+      setTimeout(() => {
+        loadTenantOverviewData();
+      }, 100);
       break;
 
     case "payments":
@@ -489,7 +557,7 @@ function loadTenantView(view) {
                 <div class="dashboard-section">
                     <div class="section-header">
                         <h3>My Payment History</h3>
-                        <button class="btn btn-primary" onclick="paymentsManager.payNowModal()">
+                        <button class="btn btn-primary" onclick="if(paymentsManager) paymentsManager.payNowModal()">
                             <i class="fas fa-credit-card"></i> Make Payment
                         </button>
                     </div>
@@ -517,37 +585,12 @@ function loadTenantView(view) {
                     </table>
                 </div>
             `;
-      if (
-        typeof paymentsManager !== "undefined" &&
-        paymentsManager.loadPayments
-      ) {
-        paymentsManager.loadPayments();
-      }
-      break;
-
-    case "maintenance":
-      content.innerHTML = `
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>My Maintenance Requests</h3>
-                        <button class="btn btn-primary" onclick="maintenanceManager.openNewRequestModal()">
-                            <i class="fas fa-plus"></i> New Request
-                        </button>
-                    </div>
-                    <div id="maintenanceList" class="maintenance-list">
-                        <div class="empty-state">
-                            <i class="fas fa-tools"></i>
-                            <h3>Loading Maintenance Requests...</h3>
-                        </div>
-                    </div>
-                </div>
-            `;
-      if (
-        typeof maintenanceManager !== "undefined" &&
-        maintenanceManager.loadMaintenance
-      ) {
-        maintenanceManager.loadMaintenance();
-      }
+      // Load payments
+      setTimeout(() => {
+        if (paymentsManager && paymentsManager.loadPayments) {
+          paymentsManager.loadPayments();
+        }
+      }, 100);
       break;
 
     case "properties":
@@ -564,12 +607,68 @@ function loadTenantView(view) {
                     </div>
                 </div>
             `;
-      if (
-        typeof propertiesManager !== "undefined" &&
-        propertiesManager.loadProperties
-      ) {
-        propertiesManager.loadProperties();
-      }
+      // Load properties
+      setTimeout(() => {
+        if (propertiesManager && propertiesManager.loadProperties) {
+          propertiesManager.loadProperties();
+        }
+      }, 100);
+      break;
+
+    case "maintenance":
+      content.innerHTML = `
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>My Maintenance Requests</h3>
+                        <button class="btn btn-primary" onclick="if(maintenanceManager) maintenanceManager.openNewRequestModal()">
+                            <i class="fas fa-plus"></i> New Request
+                        </button>
+                    </div>
+                    <div id="maintenanceList" class="maintenance-list">
+                        <div class="empty-state">
+                            <i class="fas fa-tools"></i>
+                            <h3>Loading Maintenance Requests...</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+      // Load maintenance
+      setTimeout(() => {
+        if (
+          typeof maintenanceManager !== "undefined" &&
+          maintenanceManager.loadMaintenance
+        ) {
+          maintenanceManager.loadMaintenance();
+        }
+      }, 100);
+      break;
+
+    case "documents":
+      content.innerHTML = `
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h3>My Documents</h3>
+                        <button class="btn btn-primary" onclick="if(documentManager) documentManager.openUploadModal()">
+                            <i class="fas fa-upload"></i> Upload Document
+                        </button>
+                    </div>
+                    <div id="documentsList" class="documents-grid">
+                        <div class="empty-state">
+                            <i class="fas fa-file-upload"></i>
+                            <h3>Loading Documents...</h3>
+                        </div>
+                    </div>
+                </div>
+            `;
+      // Load documents
+      setTimeout(() => {
+        if (
+          typeof documentManager !== "undefined" &&
+          documentManager.loadDocuments
+        ) {
+          documentManager.loadDocuments();
+        }
+      }, 100);
       break;
 
     case "profile":
@@ -605,31 +704,6 @@ function loadTenantView(view) {
                     </div>
                 </div>
             `;
-      break;
-    // In dashboard.js - ADD this case to the existing loadTenantView switch statement
-    case "documents":
-      content.innerHTML = `
-        <div class="dashboard-section">
-            <div class="section-header">
-                <h3>My Documents</h3>
-                <button class="btn btn-primary" onclick="documentManager.openUploadModal()">
-                    <i class="fas fa-upload"></i> Upload Document
-                </button>
-            </div>
-            <div id="documentsList" class="documents-grid">
-                <div class="empty-state">
-                    <i class="fas fa-file-upload"></i>
-                    <h3>Loading Documents...</h3>
-                </div>
-            </div>
-        </div>
-    `;
-      if (
-        typeof documentManager !== "undefined" &&
-        documentManager.loadDocuments
-      ) {
-        documentManager.loadDocuments();
-      }
       break;
   }
 }
@@ -695,6 +769,10 @@ async function loadTenantProperty() {
                 <div class="stat-item">
                     <span class="stat-label">Current Property:</span>
                     <span class="stat-value">No active lease</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Browse Properties:</span>
+                    <span class="stat-value"><a href="#" onclick="loadTenantView('properties')" style="color: var(--primary);">Click here</a></span>
                 </div>
             `;
     }
@@ -844,10 +922,7 @@ async function handleTenantProfileUpdate(event) {
   }
 }
 
-// =====================================================
-//   Load Payment Stats
-// =====================================================
-
+// Load Payment Stats
 async function loadPaymentStats() {
   const statsContainer = document.getElementById("paymentStats");
   if (!statsContainer) return;
@@ -855,343 +930,52 @@ async function loadPaymentStats() {
   let stats = await paymentsManager?.getPaymentStats?.();
 
   statsContainer.innerHTML = `
-    <div class="stat-card"><i class="fas fa-calendar"></i>
-      <div class="stat-number">$${stats?.monthlyRevenue || 0}</div>
-      <div class="stat-label">This Month</div>
-    </div>
+        <div class="stat-card">
+            <i class="fas fa-calendar"></i>
+            <div class="stat-number">$${stats?.monthlyRevenue || 0}</div>
+            <div class="stat-label">This Month</div>
+        </div>
 
-    <div class="stat-card"><i class="fas fa-chart-bar"></i>
-      <div class="stat-number">$${stats?.yearlyRevenue || 0}</div>
-      <div class="stat-label">This Year</div>
-    </div>
+        <div class="stat-card">
+            <i class="fas fa-chart-bar"></i>
+            <div class="stat-number">$${stats?.yearlyRevenue || 0}</div>
+            <div class="stat-label">This Year</div>
+        </div>
 
-    <div class="stat-card"><i class="fas fa-credit-card"></i>
-      <div class="stat-number">${stats?.paymentMethods?.length || 0}</div>
-      <div class="stat-label">Payment Methods</div>
-    </div>
+        <div class="stat-card">
+            <i class="fas fa-credit-card"></i>
+            <div class="stat-number">${stats?.paymentMethods?.length || 0}</div>
+            <div class="stat-label">Payment Methods</div>
+        </div>
 
-    <div class="stat-card"><i class="fas fa-percentage"></i>
-      <div class="stat-number">95%</div>
-      <div class="stat-label">Collection Rate</div>
-    </div>
-  `;
+        <div class="stat-card">
+            <i class="fas fa-percentage"></i>
+            <div class="stat-number">95%</div>
+            <div class="stat-label">Collection Rate</div>
+        </div>
+    `;
 }
 
-// =====================================================
-//   PAGE INITIALIZATION
-// =====================================================
-// In dashboard.js - ADD proper initialization
+// Initialize dashboard when page loads
 document.addEventListener("DOMContentLoaded", function () {
   // Check if we're on a dashboard page
   const isOwnerDashboard = window.location.pathname.includes("owner-dashboard");
   const isTenantDashboard =
     window.location.pathname.includes("tenant-dashboard");
 
-  if (isOwnerDashboard || isTenantDashboard) {
-    // Update welcome message
-    const userWelcome =
-      document.getElementById("userWelcome") ||
-      document.getElementById("tenantWelcome");
-    if (userWelcome && currentUser) {
-      userWelcome.textContent = `Welcome, ${currentUser.name}`;
-    }
-
-    // Load appropriate dashboard view
-    if (isOwnerDashboard) {
-      loadDashboardView("overview");
-      if (typeof dashboardManager !== "undefined") {
-        dashboardManager.loadDashboard();
-      }
-    } else if (isTenantDashboard) {
-      loadTenantView("overview");
-    }
+  if (isOwnerDashboard) {
+    // Load owner dashboard overview by default
+    loadDashboardView("overview");
+  } else if (isTenantDashboard) {
+    // Load tenant dashboard overview by default
+    loadTenantView("overview");
   }
 });
 
-// UPDATE loadDashboardView to handle missing elements gracefully
-function loadDashboardView(view) {
-  const content = document.getElementById("dashboardContent");
-  if (!content) {
-    console.error("Dashboard content element not found");
-    return;
-  }
-
-  // Your existing switch case code here...
-  switch (view) {
-    case "overview":
-      content.innerHTML = `
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>Dashboard Overview</h3>
-                    </div>
-                    <div class="overview-grid">
-                        <div class="overview-card">
-                            <h4><i class="fas fa-home"></i> Properties Summary</h4>
-                            <div class="overview-stats">
-                                <div class="stat-item">
-                                    <span class="stat-label">Total Properties:</span>
-                                    <span class="stat-value" id="totalProperties">0</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Available:</span>
-                                    <span class="stat-value" id="availableProperties">0</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Occupied:</span>
-                                    <span class="stat-value" id="occupiedProperties">0</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="overview-card">
-                            <h4><i class="fas fa-users"></i> Tenants Summary</h4>
-                            <div class="overview-stats">
-                                <div class="stat-item">
-                                    <span class="stat-label">Active Tenants:</span>
-                                    <span class="stat-value" id="activeTenants">0</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="overview-card">
-                            <h4><i class="fas fa-money-bill-wave"></i> Financial Summary</h4>
-                            <div class="overview-stats">
-                                <div class="stat-item">
-                                    <span class="stat-label">Monthly Revenue:</span>
-                                    <span class="stat-value" id="monthlyRevenue">$0</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Pending Payments:</span>
-                                    <span class="stat-value" id="pendingPayments">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>Recent Activity</h3>
-                    </div>
-                    <div id="recentActivity">
-                        <div class="empty-activity">
-                            <i class="fas fa-clock"></i>
-                            <p>No recent activity</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>Quick Actions</h3>
-                    </div>
-                    <div class="quick-actions">
-                        <button class="btn btn-primary" onclick="loadDashboardView('properties'); setTimeout(() => propertiesManager.openAddPropertyModal(), 100)">
-                            <i class="fas fa-plus"></i> Add Property
-                        </button>
-                        <button class="btn btn-outline" onclick="loadDashboardView('tenants')">
-                            <i class="fas fa-users"></i> Manage Tenants
-                        </button>
-                        <button class="btn btn-outline" onclick="loadDashboardView('payments')">
-                            <i class="fas fa-money-bill"></i> View Payments
-                        </button>
-                        <button class="btn btn-outline" onclick="paymentsManager.recordPaymentModal()">
-                            <i class="fas fa-receipt"></i> Record Payment
-                        </button>
-                    </div>
-                </div>
-            `;
-      break;
-
-    case "properties":
-      content.innerHTML = `
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>My Properties</h3>
-                        <button class="btn btn-primary" onclick="propertiesManager.openAddPropertyModal()">
-                            <i class="fas fa-plus"></i> Add Property
-                        </button>
-                    </div>
-                    <div id="propertiesList" class="properties-grid">
-                        <div class="empty-state">
-                            <i class="fas fa-home"></i>
-                            <h3>Loading Properties...</h3>
-                        </div>
-                    </div>
-                </div>
-            `;
-      // Load properties
-      if (
-        typeof propertiesManager !== "undefined" &&
-        propertiesManager.loadProperties
-      ) {
-        propertiesManager.loadProperties();
-      }
-      break;
-
-    case "tenants":
-      content.innerHTML = `
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>My Tenants</h3>
-                    </div>
-                    <div class="tenants-info">
-                        <p>Tenants who have applied to or are occupying your properties will appear here.</p>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Property</th>
-                                <th>Unit</th>
-                                <th>Rent</th>
-                                <th>Lease Start</th>
-                                <th>Lease End</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tenantsList">
-                            <tr>
-                                <td colspan="10" class="empty-state">
-                                    <i class="fas fa-users"></i>
-                                    <h4>Loading Tenants...</h4>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            `;
-      // Load tenants
-      if (typeof tenantsManager !== "undefined" && tenantsManager.loadTenants) {
-        tenantsManager.loadTenants();
-      }
-      break;
-
-    case "payments":
-      content.innerHTML = `
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>Payment History</h3>
-                        <button class="btn btn-primary" onclick="paymentsManager.recordPaymentModal()">
-                            <i class="fas fa-plus"></i> Record Payment
-                        </button>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Tenant</th>
-                                <th>Property</th>
-                                <th>Amount</th>
-                                <th>Payment Date</th>
-                                <th>Due Date</th>
-                                <th>Month</th>
-                                <th>Status</th>
-                                <th>Method</th>
-                                <th>Reference</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="paymentsList">
-                            <tr>
-                                <td colspan="10" class="empty-state">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                    <h4>Loading Payments...</h4>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            `;
-      // Load payments
-      if (
-        typeof paymentsManager !== "undefined" &&
-        paymentsManager.loadPayments
-      ) {
-        paymentsManager.loadPayments();
-      }
-      break;
-
-    case "maintenance":
-      content.innerHTML = `
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h3>Maintenance Requests</h3>
-                    </div>
-                    <div id="maintenanceList" class="maintenance-list">
-                        <div class="empty-state">
-                            <i class="fas fa-tools"></i>
-                            <h3>Loading Maintenance Requests...</h3>
-                        </div>
-                    </div>
-                </div>
-            `;
-      // Load maintenance
-      if (
-        typeof maintenanceManager !== "undefined" &&
-        maintenanceManager.loadMaintenance
-      ) {
-        maintenanceManager.loadMaintenance();
-      }
-      break;
-
-    // In dashboard.js - ADD this case to loadDashboardView
-    case "applications":
-      content.innerHTML = `
-        <div class="dashboard-section">
-            <div class="section-header">
-                <h3>Tenant Applications</h3>
-            </div>
-            <div id="applicationsList" class="applications-grid">
-                <div class="empty-state">
-                    <i class="fas fa-file-alt"></i>
-                    <h3>Loading Applications...</h3>
-                </div>
-            </div>
-        </div>
-    `;
-      if (
-        typeof applicationsManager !== "undefined" &&
-        applicationsManager.loadApplications
-      ) {
-        applicationsManager.loadApplications();
-      }
-      break;
-  }
-}
-// ADD this at the end of dashboard.js file (after all existing code)
-class DocumentManager {
-  constructor() {
-    this.documents = [];
-  }
-
-  async loadDocuments() {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/documents`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        this.documents = data.documents || [];
-        this.displayDocuments();
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (error) {
-      console.error("Error loading documents:", error);
-      this.documents = [];
-      this.displayDocuments();
-    }
-  }
-
-  // ... include all other DocumentManager methods from previous code ...
-}
-
-const documentManager = new DocumentManager();
+// Make functions globally available
+window.loadDashboardView = loadDashboardView;
+window.loadTenantView = loadTenantView;
+window.dashboardManager = dashboardManager;
+window.loadTenantOverviewData = loadTenantOverviewData;
+window.editTenantProfile = editTenantProfile;
+window.handleTenantProfileUpdate = handleTenantProfileUpdate;
